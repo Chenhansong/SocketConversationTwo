@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Newtonsoft.Json;
 
 namespace Server
 {
@@ -17,35 +21,35 @@ namespace Server
         private TextBox textbox { get; set; }
         private Panel panel { get; set; }
         private readonly string UserId;
+        private Socket socketClient;
+        private readonly string ip;
+        private readonly int port;
 
-        public Client(TextBox textbox, Panel panel,string userid)
+        public Client(TextBox textbox, Panel panel,string userid,string ip,int port)
         {
             this.textbox = textbox;
             this.panel = panel;
             this.UserId = userid;
+            this.ip = ip;
+            this.port = port;
         }
 
-        public void StartClient(string ip, int port)
+        public void StartClient()
         {
             try
             {
-                byte[] receiveBytes = new byte[1024];
-                IPHostEntry iPHost = Dns.Resolve(ip);
+                IPHostEntry iPHost = Dns.Resolve(this.ip);
                 IPAddress iPAddress = iPHost.AddressList[0];
-                IPEndPoint iPEnd = new IPEndPoint(iPAddress, port);
+                IPEndPoint iPEnd = new IPEndPoint(iPAddress, this.port);
 
                 Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
+                this.socketClient = client;
                 client.BeginConnect(iPEnd, new AsyncCallback(ConnectCallBack), client);
-
-                Send(client, textbox.Text);
-
-                Receive(client);
             }
             catch (Exception e)
             {
                 Label error = new Label();
-                error.Text = "some error:" + e;
+                error.Text = "some error1:" + e;
                 error.AutoSize = true;
                 AddControlToPanel(error);
             }
@@ -99,16 +103,61 @@ namespace Server
             catch (Exception e)
             {
                 Label error = new Label();
-                error.Text = "some error:" + e;
+                error.Text = "some error:2" + e;
                 error.AutoSize = true;
                 AddControlToPanel(error);
             }
         }
 
-        public void Send(Socket client, string data)
+        public void Send(string text)
         {
-            byte[] byteData = Encoding.UTF8.GetBytes(data + "<UserId>" + this.UserId + "<END>");
-            client.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendBackCall), client);
+            StartClient();
+            DateTime time = DateTime.Now;
+            string messageModel = JsonConvert.SerializeObject(new MessageModel { Message = text, UserId = this.UserId, CreateTime = time });
+            byte[] byteData= Encoding.UTF8.GetBytes(messageModel);
+            this.socketClient.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendBackCall), this.socketClient);
+
+            Label sendmessage = new Label();
+            sendmessage.Text = string.Format(text + "     :" + time);
+            sendmessage.AutoSize = true;
+            sendmessage.Location = new Point(panel.Width - sendmessage.Width * 2, sendmessage.Height);
+            AddControlToPanel(sendmessage);
+        }
+
+        /// <summary>
+        /// 发送文件
+        /// </summary>
+        /// <param name="files"></param>
+        public void SendFile(List<string> fileaddress, string message)
+        {
+            foreach (var address in fileaddress)
+            {
+                StartClient();
+                Bitmap bitmap = new Bitmap(address);
+                byte[] byteimg = ImgToBytes(bitmap);
+                string jsondata = JsonConvert.SerializeObject(new MessageModel { UserId = this.UserId, Message = message, CreateTime = DateTime.Now, MessageFile = Convert.ToBase64String(byteimg) });
+                byte[] byteData = Encoding.UTF8.GetBytes(jsondata);
+
+                this.socketClient.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendBackCall), this.socketClient);
+            }           
+        }
+
+        public byte[] ImgToBytes(Bitmap bitmap)
+        {
+            MemoryStream memory = new MemoryStream();
+            bitmap.Save(memory, ImageFormat.Png);
+            int len = (int)memory.Position;
+
+            byte[] ret = new byte[memory.Position];
+            memory.Seek(0, SeekOrigin.Begin);
+            memory.Read(ret, 0, len);
+
+            return ret;
+        }
+
+        public Image BytesToImage(byte[] bytes)
+        {
+            return Image.FromStream(new MemoryStream(bytes));
         }
 
         public void SendBackCall(IAsyncResult ar)
@@ -117,11 +166,13 @@ namespace Server
             {
                 Socket client = (Socket)ar.AsyncState;
                 int bytesSent = client.EndSend(ar);
+
+                Receive(client);//开始接收服务器返回的数据
             }
             catch (Exception e)
             {
                 Label error = new Label();
-                error.Text = "some error:" + e;
+                error.Text = "some error:3" + e;
                 error.AutoSize = true;
                 AddControlToPanel(error);
             }
@@ -139,7 +190,7 @@ namespace Server
             catch (Exception e)
             {
                 Label error = new Label();
-                error.Text = "some error:" + e;
+                error.Text = "some error:4" + e;
                 error.AutoSize = true;
                 AddControlToPanel(error);
             }
@@ -161,25 +212,18 @@ namespace Server
                 }
                 else
                 {
-                    if (state.sb.Length > 1)
+                    if (state.sb.Length >= 1)
                     {
                         response = state.sb.ToString();//得到返回数据
-
-                        Label sendmessage = new Label();
-                        sendmessage.Text = string.Format(response + "     :" + DateTime.Now);
-                        sendmessage.AutoSize = true;
-                        sendmessage.Location = new Point(panel.Width - sendmessage.Width * 2, sendmessage.Height);
-                        AddControlToPanel(sendmessage);
-
                         client.Shutdown(SocketShutdown.Both);
-                        client.Close();
+                        client.Close();                        
                     }
                 }
             }
             catch (Exception e)
             {
                 Label error = new Label();
-                error.Text = "some error:" + e;
+                error.Text = "some error:5" + e;
                 error.AutoSize = true;
                 AddControlToPanel(error);
             }

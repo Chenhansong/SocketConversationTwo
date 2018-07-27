@@ -149,26 +149,26 @@ namespace Server
                 content = stateObject.sb.ToString();
                 if (content.IndexOf("<END>") > -1)
                 {
-                    Label receivedata = new Label();                 
+                    //Label receivedata = new Label();                 
 
-                    string[] sArray = content.Split(new string[] { "<UserId>","<END>" }, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (string e in sArray)
-                    {
-                        messageModel.Message = sArray[0];
-                        messageModel.CreateTime = DateTime.Now;
-                        receivedata.Text = sArray[0] + "     :" + DateTime.Now;
-                        messageModel.UserId = sArray[1];
-                    }
-                    receivedata.AutoSize = true;
-                    AddControlToPanel(receivedata);
+                    //string[] sArray = content.Split(new string[] { "<UserId>","<END>" }, StringSplitOptions.RemoveEmptyEntries);
+                    //foreach (string e in sArray)
+                    //{
+                    //    messageModel.Message = sArray[0];
+                    //    messageModel.CreateTime = DateTime.Now;
+                    //    receivedata.Text = sArray[0] + "     :" + DateTime.Now;
+                    //    messageModel.UserId = sArray[1];
+                    //}
+                    //receivedata.AutoSize = true;
+                    //AddControlToPanel(receivedata);
 
-                    bool result = data.InsertMessage(messageModel);
-                    if (!result)
-                    {
-                        Console.WriteLine("Insert Message Error");
-                    }
+                    //bool result = data.InsertMessage(messageModel);
+                    //if (!result)
+                    //{
+                    //    Console.WriteLine("Insert Message Error");
+                    //}
 
-                    Send(handler, receivedata.Text);
+                    Send(handler, "");
                 }
                 else
                 {
