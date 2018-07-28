@@ -25,6 +25,11 @@ namespace Server
         private readonly string ip;
         private readonly int port;
 
+        /// <summary>
+        /// 连接成功回调
+        /// </summary>
+        //private delegate void ConnectBackCall(byte[] byteData);
+
         public Client(TextBox textbox, Panel panel,string userid,string ip,int port)
         {
             this.textbox = textbox;
@@ -32,6 +37,7 @@ namespace Server
             this.UserId = userid;
             this.ip = ip;
             this.port = port;
+            //ConnectBackCall connectBackCall = new ConnectBackCall(SendFileBackCall);
         }
 
         public void StartClient()
@@ -133,27 +139,70 @@ namespace Server
             foreach (var address in fileaddress)
             {
                 StartClient();
-                Bitmap bitmap = new Bitmap(address);
-                byte[] byteimg = ImgToBytes(bitmap);
-                string jsondata = JsonConvert.SerializeObject(new MessageModel { UserId = this.UserId, Message = message, CreateTime = DateTime.Now, MessageFile = Convert.ToBase64String(byteimg) });
-                byte[] byteData = Encoding.UTF8.GetBytes(jsondata);
+                try
+                {
+                    byte[] byteimg = ImgToBytes(address);
 
-                this.socketClient.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendBackCall), this.socketClient);
+                    string jsondata = JsonConvert.SerializeObject(new MessageModel { UserId = this.UserId, Message = message, CreateTime = DateTime.Now, MessageFile = byteimg });
+                    byte[] byteData = Encoding.UTF8.GetBytes(jsondata);
+                    while (!this.socketClient.Connected) { }
+                    SendFileBackCall(byteData);
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("file error" + e);
+                }
+
             }           
         }
 
-        public byte[] ImgToBytes(Bitmap bitmap)
-        {
-            MemoryStream memory = new MemoryStream();
-            bitmap.Save(memory, ImageFormat.Png);
-            int len = (int)memory.Position;
-
-            byte[] ret = new byte[memory.Position];
-            memory.Seek(0, SeekOrigin.Begin);
-            memory.Read(ret, 0, len);
-
-            return ret;
+        public void SendFileBackCall(byte[] byteData)
+        {           
+            this.socketClient.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendBackCall), this.socketClient);
         }
+
+        public byte[] ImgToBytes(string address )
+        {
+            Image image = Image.FromFile(address);
+            ImageFormat format = image.RawFormat;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                if (format.Equals(ImageFormat.Jpeg))
+                {
+                    image.Save(ms, ImageFormat.Jpeg);
+                }
+                else if (format.Equals(ImageFormat.Png))
+                {
+                    image.Save(ms, ImageFormat.Png);
+                }
+                else if (format.Equals(ImageFormat.Bmp))
+                {
+                    image.Save(ms, ImageFormat.Bmp);
+                }
+                else if (format.Equals(ImageFormat.Gif))
+                {
+                    image.Save(ms, ImageFormat.Gif);
+                }
+                else if (format.Equals(ImageFormat.Icon))
+                {
+                    image.Save(ms, ImageFormat.Icon);
+                }
+                byte[] buffer = new byte[ms.Length];
+                //Image.Save()会改变MemoryStream的Position，需要重新Seek到Begin
+                ms.Seek(0, SeekOrigin.Begin);
+                ms.Read(buffer, 0, buffer.Length);
+                return buffer;
+            }
+        }
+
+        //public byte[] ImgToBytes(string path)
+        //{
+        //    FileStream fileStream = new FileStream(path,FileMode.Open);
+        //    byte[] ret = new byte[fileStream.Length];
+        //    fileStream.Read(ret, 0, ret.Length);
+
+        //    return ret;
+        //}
 
         public Image BytesToImage(byte[] bytes)
         {
