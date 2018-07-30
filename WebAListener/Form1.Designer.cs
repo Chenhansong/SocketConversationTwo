@@ -45,7 +45,7 @@
             // 
             // send
             // 
-            this.send.Location = new System.Drawing.Point(849, 704);
+            this.send.Location = new System.Drawing.Point(702, 704);
             this.send.Name = "send";
             this.send.Size = new System.Drawing.Size(75, 23);
             this.send.TabIndex = 1;
@@ -64,7 +64,7 @@
             // 
             // filebutton
             // 
-            this.filebutton.Location = new System.Drawing.Point(724, 704);
+            this.filebutton.Location = new System.Drawing.Point(815, 704);
             this.filebutton.Name = "filebutton";
             this.filebutton.Size = new System.Drawing.Size(75, 23);
             this.filebutton.TabIndex = 3;

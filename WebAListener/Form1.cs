@@ -33,7 +33,6 @@ namespace WebAListener
         private void send_Click(object sender, EventArgs e)
         {
             SendMessage();
-            textBox1.Text = string.Empty;
         }
 
         public void SendMessage()
@@ -43,8 +42,7 @@ namespace WebAListener
 
         private void StartServer()
         {
-            Server.Server serverListen = new Server.Server(panel1, this.IP, this.ReceivePort,this.UserId);
-            serverListen.StartListening();
+            Server.Server serverListen = new Server.Server(panel1, this.IP, this.ReceivePort, this.UserId);
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -64,6 +62,9 @@ namespace WebAListener
             this.panel1.VerticalScroll.Enabled = true;
             this.panel1.VerticalScroll.Visible = true;
             this.panel1.Scroll += panel1_Scroll;
+
+            Point newPoint = new Point(0, this.panel1.Height - panel1.AutoScrollPosition.Y);
+            panel1.AutoScrollPosition = newPoint;
         }
 
         /// <summary>
